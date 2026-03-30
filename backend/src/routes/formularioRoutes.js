@@ -1,8 +1,14 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const { createFormulario, getFormularios } = require("../controllers/formularioController");
+const {
+  createFormulario,
+  getFormularioById,
+  getFormularios,
+  updateChecklist,
+} = require("../controllers/formularioController");
 const { uploadDirectory } = require("../utils/storage");
+const { authenticateToken } = require("../middlewares/authMiddleware");
 
 const allowedMimeTypes = ["application/pdf", "image/png"];
 
@@ -42,7 +48,9 @@ const upload = multer({
 const formularioRouter = express.Router();
 
 formularioRouter.post("/formulario", upload.array("documentosApoio", 10), createFormulario);
-formularioRouter.get("/formularios", getFormularios);
+formularioRouter.get("/formularios", authenticateToken, getFormularios);
+formularioRouter.get("/formulario/:id", authenticateToken, getFormularioById);
+formularioRouter.put("/formulario/:id/checklist", authenticateToken, updateChecklist);
 
 module.exports = {
   formularioRouter,

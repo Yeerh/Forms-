@@ -1,55 +1,84 @@
-﻿# Formulario de Acompanhamento de Projetos
+﻿# Sistema de Gerenciamento de Formularios de Projetos
 
-Aplicacao web completa para registro e acompanhamento de projetos institucionais.
+Aplicacao web completa com frontend React e backend Node.js + Express para autenticacao e verificacao de formularios.
 
-- Frontend: React + Vite
+## Tecnologias
+
+- Frontend: React + Vite + Axios
 - Backend: Node.js + Express
-- Persistencia: arquivo JSON local
-- Upload: PDF e PNG com Multer
+- Autenticacao: JWT
+- Persistencia: arquivo JSON (`backend/data/formularios.json`)
+- Upload de arquivos: Multer (PDF e PNG)
 
-## Funcionalidades
+## Funcionalidades entregues
 
-- Tela inicial de orientacoes com card central
-- Formulario dividido em 10 secoes
-- Validacao de campos obrigatorios no frontend e backend
-- Checkbox de situacao com selecao unica
-- Upload de documentos de apoio (PDF/PNG)
-- Preview de imagens PNG anexadas
-- Barra de progresso de preenchimento
-- Mensagem de sucesso apos envio
-- Dashboard simples com listagem dos formularios enviados
+- Login com usuario/e-mail e senha
+- Protecao de rotas no frontend (dashboard apenas logado)
+- API protegida por token JWT para rotas do dashboard
+- Dashboard com tabela de formularios
+- Filtro por nome ou matricula
+- Botao `Ver detalhes` por linha
+- Modal em duas colunas:
+  - Coluna esquerda: documentos enviados (preview imagem e link para PDF)
+  - Coluna direita: checklist de validacao
+- Atualizacao do checklist via API
+- Status visual do formulario (`pendente`, `em_analise`, `aprovado`)
 
-## Estrutura do projeto
+## Credenciais de teste
+
+- Usuario: `admin`
+- E-mail: `admin@projetos.local`
+- Senha: `123456`
+
+## Estrutura de pastas
 
 ```text
 forms/
   backend/
-    data/formularios.json
+    data/
+      formularios.json
     uploads/
     src/
+      config/
+        auth.js
       controllers/
+        authController.js
+        formularioController.js
+      middlewares/
+        authMiddleware.js
       routes/
+        authRoutes.js
+        formularioRoutes.js
       utils/
+        storage.js
       validators/
+        formularioValidator.js
       server.js
   frontend/
     src/
       api/
+        authApi.js
+        formularioApi.js
+        httpClient.js
       components/
+        ProtectedRoute.jsx
+        dashboard/
+          FormularioDetailsModal.jsx
+          FormulariosTable.jsx
+      context/
+        AuthContext.jsx
       pages/
+        LoginPage.jsx
+        DashboardPage.jsx
       styles/
+        app.css
       App.jsx
       main.jsx
 ```
 
-## Requisitos
+## Como rodar o sistema
 
-- Node.js 18 ou superior
-- npm 9 ou superior
-
-## Executando localmente
-
-### 1) Subir o backend
+### 1) Backend
 
 ```bash
 cd backend
@@ -57,9 +86,9 @@ npm install
 npm run dev
 ```
 
-API em: `http://localhost:3001`
+Servidor backend: `http://localhost:3001`
 
-### 2) Subir o frontend
+### 2) Frontend
 
 Em outro terminal:
 
@@ -69,76 +98,62 @@ npm install
 npm run dev
 ```
 
-Aplicacao em: `http://localhost:5173`
+Frontend: `http://localhost:5173`
 
-## Variavel de ambiente do frontend (opcional)
+## Variavel de ambiente (opcional)
 
-Se precisar mudar a URL da API:
+Se quiser alterar o endereco da API no frontend, crie:
 
 ```bash
 # frontend/.env
 VITE_API_URL=http://localhost:3001
 ```
 
-## Endpoints da API
+## Rotas da API
 
-### GET `/health`
+### Publica
 
-Retorna o status da API.
+- `POST /login` -> autentica usuario e retorna token JWT
 
-### POST `/formulario`
+### Protegidas (Bearer Token)
 
-Recebe envio do formulario em `multipart/form-data`.
+- `GET /formularios` -> lista formularios para o dashboard
+- `GET /formulario/:id` -> retorna detalhes de um formulario
+- `PUT /formulario/:id/checklist` -> salva checklist de verificacao
 
-Campos principais:
+### Suporte (ja existente)
 
-- Campos textuais do formulario
-- `tiposDocumentos`: array (enviado como JSON string)
-- `documentosApoio`: arquivos PDF ou PNG
+- `POST /formulario` -> cria novo formulario com upload
+- `GET /health` -> status da API
 
-Resposta de sucesso (201):
+## Exemplo de login
+
+### Request
 
 ```json
 {
-  "message": "Formulario enviado com sucesso.",
-  "formulario": {
-    "id": "uuid",
-    "createdAt": "2026-03-30T12:00:00.000Z"
+  "identifier": "admin",
+  "password": "123456"
+}
+```
+
+### Response
+
+```json
+{
+  "token": "jwt-token",
+  "user": {
+    "id": "1",
+    "name": "Administrador",
+    "email": "admin@projetos.local",
+    "username": "admin",
+    "role": "secretaria"
   }
 }
 ```
 
-### GET `/formularios`
+## Observacoes
 
-Lista os formularios enviados:
-
-```json
-{
-  "total": 1,
-  "items": []
-}
-```
-
-## Validacoes implementadas
-
-- Campos obrigatorios de todas as secoes
-- Percentual de execucao entre 0 e 100
-- Quantitativo maior ou igual a 0
-- Pelo menos 1 tipo de documento selecionado
-- Campo "Outros" obrigatorio quando selecionado
-- Pelo menos 1 arquivo anexado
-- Restricao de tipo de arquivo: PDF e PNG
-- Limite de 10 arquivos por envio
-
-## Scripts
-
-Backend:
-
-- `npm run dev`: sobe API com watch
-- `npm start`: sobe API em modo normal
-
-Frontend:
-
-- `npm run dev`: sobe app em desenvolvimento
-- `npm run build`: gera build de producao
-- `npm run preview`: visualiza build local
+- As rotas de dashboard exigem `Authorization: Bearer <token>`.
+- Os dados continuam sendo armazenados no arquivo JSON local.
+- O status do formulario e atualizado quando o checklist e salvo.

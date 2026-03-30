@@ -1,4 +1,4 @@
-function isBlank(value) {
+﻿function isBlank(value) {
   return value === undefined || value === null || String(value).trim() === "";
 }
 
@@ -11,37 +11,38 @@ function validateFormulario(payload) {
 
   const requiredFields = {
     secretaria: "Secretaria",
-    periodoReferencia: "Período de referência",
+    periodoReferencia: "Periodo de referencia",
     nomeResponsavel: "Nome",
-    matricula: "Matrícula",
+    matricula: "Matricula",
+    tipoProjetoAcao: "Tipo do projeto/acao",
     nomeProjeto: "Nome do projeto",
     objetivo: "Objetivo",
-    metaComoAlcancar: "Meta e como alcançar",
+    metaComoAlcancar: "Meta e como alcancar",
     quantitativo: "Quantitativo",
     unidade: "Unidade",
-    endereco: "Endereço",
-    situacaoProjeto: "Situação do projeto",
-    percentualExecucao: "Percentual de execução",
-    prazoPrevistoConclusao: "Prazo previsto de conclusão",
+    endereco: "Endereco",
+    situacaoProjeto: "Situacao do projeto",
+    percentualExecucao: "Percentual de execucao",
+    prazoPrevistoConclusao: "Prazo previsto de conclusao",
     contratadoNome: "Nome do contratado",
-    numeroContrato: "Número do contrato",
+    numeroContrato: "Numero do contrato",
     objetoContrato: "Objeto",
-    avancosPeriodo: "Principais avanços no período",
+    avancosPeriodo: "Principais avancos no periodo",
     dificuldadesEntraves: "Principais dificuldades ou entraves",
-    acoesNecessarias: "Ações necessárias",
+    acoesNecessarias: "Acoes necessarias",
     dataEnvio: "Data do envio",
     formaEnvio: "Forma de envio",
   };
 
   Object.entries(requiredFields).forEach(([key, label]) => {
     if (isBlank(payload[key])) {
-      errors[key] = `${label} é obrigatório(a).`;
+      errors[key] = `${label} e obrigatorio(a).`;
     }
   });
 
   const quantitativo = Number(payload.quantitativo);
   if (!isBlank(payload.quantitativo) && (Number.isNaN(quantitativo) || quantitativo < 0)) {
-    errors.quantitativo = "Quantitativo deve ser um número maior ou igual a 0.";
+    errors.quantitativo = "Quantitativo deve ser um numero maior ou igual a 0.";
   }
 
   const percentual = Number(payload.percentualExecucao);
@@ -53,15 +54,15 @@ function validateFormulario(payload) {
   }
 
   if (!isBlank(payload.prazoPrevistoConclusao) && isInvalidDate(payload.prazoPrevistoConclusao)) {
-    errors.prazoPrevistoConclusao = "Prazo previsto precisa ser uma data válida.";
+    errors.prazoPrevistoConclusao = "Prazo previsto precisa ser uma data valida.";
   }
 
   if (!isBlank(payload.prazoAtualizado) && isInvalidDate(payload.prazoAtualizado)) {
-    errors.prazoAtualizado = "Prazo atualizado precisa ser uma data válida.";
+    errors.prazoAtualizado = "Prazo atualizado precisa ser uma data valida.";
   }
 
   if (!isBlank(payload.dataEnvio) && isInvalidDate(payload.dataEnvio)) {
-    errors.dataEnvio = "Data do envio precisa ser uma data válida.";
+    errors.dataEnvio = "Data do envio precisa ser uma data valida.";
   }
 
   if (!Array.isArray(payload.tiposDocumentos) || payload.tiposDocumentos.length === 0) {
@@ -86,4 +87,3 @@ function validateFormulario(payload) {
 module.exports = {
   validateFormulario,
 };
-

@@ -4,6 +4,13 @@ const path = require("path");
 const { readFormularios, writeFormularios } = require("../utils/storage");
 const { validateFormulario } = require("../validators/formularioValidator");
 
+const checklistTemplate = [
+  { id: "documento_valido", label: "Documento valido", checked: false },
+  { id: "informacoes_completas", label: "Informacoes completas", checked: false },
+  { id: "dados_conferidos", label: "Dados conferidos", checked: false },
+  { id: "aprovacao_secretaria", label: "Aprovacao da secretaria", checked: false },
+];
+
 function safeParseArray(value) {
   if (!value) {
     return [];
@@ -18,7 +25,6 @@ function safeParseArray(value) {
   }
 
   const trimmedValue = value.trim();
-
   if (!trimmedValue) {
     return [];
   }
@@ -72,6 +78,7 @@ function normalizePayload(body, files) {
     periodoReferencia: body.periodoReferencia,
     nomeResponsavel: body.nomeResponsavel,
     matricula: body.matricula,
+    tipoProjetoAcao: body.tipoProjetoAcao,
     nomeProjeto: body.nomeProjeto,
     objetivo: body.objetivo,
     metaComoAlcancar: body.metaComoAlcancar,
@@ -96,9 +103,58 @@ function normalizePayload(body, files) {
   };
 }
 
+function ensureChecklist(rawChecklist) {
+  const normalized = Array.isArray(rawChecklist) ? rawChecklist : [];
+  const map = new Map(normalized.map((item) => [item.id, !!item.checked]));
+
+  return checklistTemplate.map((item) => ({
+    id: item.id,
+    label: item.label,
+    checked: map.has(item.id) ? map.get(item.id) : item.checked,
+  }));
+}
+
+function getChecklistStatus(checklist) {
+  const checkedCount = checklist.filter((item) => item.checked).length;
+
+  if (checkedCount === 0) {
+    return "pendente";
+  }
+
+  if (checkedCount === checklist.length) {
+    return "aprovado";
+  }
+
+  return "em_analise";
+}
+
+function buildDocumentos(tiposDocumentos, arquivos, outrosDocumento) {
+  const tipos = Array.isArray(tiposDocumentos) ? tiposDocumentos : [];
+  const normalizedOutros =
+    tipos.includes("Outros") && outrosDocumento ? `Outros: ${outrosDocumento}` : "Outros";
+
+  return arquivos.map((arquivo, index) => {
+    let tipo = tipos[index] || tipos[0] || "Documento de apoio";
+    if (tipo === "Outros") {
+      tipo = normalizedOutros;
+    }
+
+    return {
+      id: randomUUID(),
+      tipo,
+      arquivo,
+    };
+  });
+}
+
 function mapForPersistence(payload) {
+  const checklist = ensureChecklist([]);
+  const documentos = buildDocumentos(payload.tiposDocumentos, payload.arquivos, payload.outrosDocumento);
+
   return {
     id: randomUUID(),
+    nomePessoa: payload.nomeResponsavel,
+    matricula: payload.matricula,
     identificador: {
       secretaria: payload.secretaria,
       periodoReferencia: payload.periodoReferencia,
@@ -106,6 +162,7 @@ function mapForPersistence(payload) {
       matricula: payload.matricula,
     },
     projetoAcao: {
+      tipoProjetoAcao: payload.tipoProjetoAcao,
       nomeProjeto: payload.nomeProjeto,
       objetivo: payload.objetivo,
     },
@@ -140,12 +197,48 @@ function mapForPersistence(payload) {
       outros: payload.outrosDocumento || null,
       arquivos: payload.arquivos,
     },
+    documentos,
+    checklist,
+    verificado: false,
+    statusVerificacao: "pendente",
     envio: {
       dataEnvio: payload.dataEnvio,
       formaEnvio: payload.formaEnvio,
     },
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    checklistUpdatedAt: null,
   };
+}
+
+function mapLegacyDocumentos(item) {
+  const tipos = item.documentosApoio?.tipos || [];
+  const arquivos = item.documentosApoio?.arquivos || [];
+
+  return arquivos.map((arquivo, index) => ({
+    id: randomUUID(),
+    tipo: tipos[index] || tipos[0] || "Documento de apoio",
+    arquivo,
+  }));
+}
+
+function normalizeFormulario(item) {
+  const checklist = ensureChecklist(item.checklist);
+  const statusVerificacao = item.statusVerificacao || getChecklistStatus(checklist);
+
+  return {
+    ...item,
+    nomePessoa: item.nomePessoa || item.identificador?.nomeResponsavel || "",
+    matricula: item.matricula || item.identificador?.matricula || "",
+    documentos: Array.isArray(item.documentos) && item.documentos.length ? item.documentos : mapLegacyDocumentos(item),
+    checklist,
+    statusVerificacao,
+    verificado: typeof item.verificado === "boolean" ? item.verificado : checklist.some((entry) => entry.checked),
+  };
+}
+
+function getFormulariosForRead() {
+  return readFormularios().map(normalizeFormulario);
 }
 
 function createFormulario(request, response) {
@@ -155,34 +248,130 @@ function createFormulario(request, response) {
   if (Object.keys(validationErrors).length > 0) {
     cleanupUploadedFiles(request.files);
     return response.status(400).json({
-      message: "Falha na validação do formulário.",
+      message: "Falha na validacao do formulario.",
       errors: validationErrors,
     });
   }
 
-  const formularios = readFormularios();
+  const formularios = getFormulariosForRead();
   const novoFormulario = mapForPersistence(payload);
   formularios.push(novoFormulario);
   writeFormularios(formularios);
 
   return response.status(201).json({
-    message: "Formulário enviado com sucesso.",
+    message: "Formulario enviado com sucesso.",
     formulario: novoFormulario,
   });
 }
 
 function getFormularios(request, response) {
-  const formularios = readFormularios().sort((a, b) => {
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const query = String(request.query.query || "").trim().toLowerCase();
+
+  const items = getFormulariosForRead()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .filter((item) => {
+      if (!query) {
+        return true;
+      }
+
+      const nome = String(item.nomePessoa || "").toLowerCase();
+      const matricula = String(item.matricula || "").toLowerCase();
+      return nome.includes(query) || matricula.includes(query);
+    })
+    .map((item) => ({
+      id: item.id,
+      nomePessoa: item.nomePessoa,
+      matricula: item.matricula,
+      statusVerificacao: item.statusVerificacao,
+      verificado: item.verificado,
+      checklistUpdatedAt: item.checklistUpdatedAt,
+      totalDocumentos: Array.isArray(item.documentos) ? item.documentos.length : 0,
+    }));
 
   return response.status(200).json({
-    total: formularios.length,
-    items: formularios,
+    total: items.length,
+    items,
+  });
+}
+
+function getFormularioById(request, response) {
+  const formularios = getFormulariosForRead();
+  const item = formularios.find((entry) => entry.id === request.params.id);
+
+  if (!item) {
+    return response.status(404).json({
+      message: "Formulario nao encontrado.",
+    });
+  }
+
+  return response.status(200).json({
+    formulario: item,
+  });
+}
+
+function normalizeChecklistInput(checklistInput) {
+  if (!Array.isArray(checklistInput)) {
+    return null;
+  }
+
+  const map = new Map();
+  checklistInput.forEach((item) => {
+    if (!item || !item.id) {
+      return;
+    }
+
+    map.set(item.id, !!item.checked);
+  });
+
+  return checklistTemplate.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    checked: map.has(entry.id) ? map.get(entry.id) : false,
+  }));
+}
+
+function updateChecklist(request, response) {
+  const checklist = normalizeChecklistInput(request.body.checklist);
+
+  if (!checklist) {
+    return response.status(400).json({
+      message: "Checklist invalido.",
+    });
+  }
+
+  const formularios = getFormulariosForRead();
+  const index = formularios.findIndex((entry) => entry.id === request.params.id);
+
+  if (index < 0) {
+    return response.status(404).json({
+      message: "Formulario nao encontrado.",
+    });
+  }
+
+  const current = formularios[index];
+  const statusVerificacao = getChecklistStatus(checklist);
+  const updated = {
+    ...current,
+    checklist,
+    statusVerificacao,
+    verificado: true,
+    updatedAt: new Date().toISOString(),
+    checklistUpdatedAt: new Date().toISOString(),
+    checklistUpdatedBy: request.user?.email || request.user?.name || "usuario",
+  };
+
+  formularios[index] = updated;
+  writeFormularios(formularios);
+
+  return response.status(200).json({
+    message: "Checklist atualizado com sucesso.",
+    formulario: updated,
   });
 }
 
 module.exports = {
   createFormulario,
+  getFormularioById,
   getFormularios,
+  updateChecklist,
 };

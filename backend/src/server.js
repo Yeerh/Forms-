@@ -1,7 +1,8 @@
-const express = require("express");
+﻿const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const multer = require("multer");
+const { authRouter } = require("./routes/authRoutes");
 const { formularioRouter } = require("./routes/formularioRoutes");
 const { ensureStorage } = require("./utils/storage");
 
@@ -22,25 +23,26 @@ app.get("/health", (request, response) => {
   });
 });
 
+app.use("/", authRouter);
 app.use("/", formularioRouter);
 
 app.use((error, request, response, next) => {
   if (error.message === "INVALID_FILE_TYPE") {
     return response.status(400).json({
-      message: "Tipo de arquivo inválido. Envie apenas arquivos PDF ou PNG.",
+      message: "Tipo de arquivo invalido. Envie apenas arquivos PDF ou PNG.",
     });
   }
 
   if (error instanceof multer.MulterError) {
     if (error.code === "LIMIT_FILE_SIZE") {
       return response.status(400).json({
-        message: "Arquivo excede o tamanho máximo de 10MB.",
+        message: "Arquivo excede o tamanho maximo de 10MB.",
       });
     }
 
     if (error.code === "LIMIT_FILE_COUNT") {
       return response.status(400).json({
-        message: "Envie no máximo 10 arquivos por formulário.",
+        message: "Envie no maximo 10 arquivos por formulario.",
       });
     }
   }
@@ -53,4 +55,3 @@ app.use((error, request, response, next) => {
 app.listen(port, () => {
   console.log(`API rodando em http://localhost:${port}`);
 });
-
