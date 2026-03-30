@@ -8,8 +8,8 @@ function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("admin");
-  const [password, setPassword] = useState("123456");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ function LoginPage() {
           `Nao foi possivel conectar com a API em ${apiBaseUrl}. Inicie o backend com: cd backend && npm run dev`
         );
       } else if (error.response.status === 401) {
-        setApiError("Credenciais invalidas. Use admin / 123456 para teste.");
+        setApiError(error.response?.data?.message || "Credenciais invalidas.");
       } else {
         setApiError(error.response?.data?.message || "Nao foi possivel fazer login.");
       }
@@ -62,7 +62,7 @@ function LoginPage() {
     <section className="login-page">
       <article className="login-card">
         <h2>Entrar no sistema</h2>
-        <p className="muted">Use seu usuario ou e-mail para acessar o dashboard.</p>
+        <p className="muted">Use seu usuario de rede ou e-mail corporativo para acessar o dashboard.</p>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           <label className="field-label" htmlFor="identifier">
@@ -76,7 +76,7 @@ function LoginPage() {
               setIdentifier(event.target.value);
               setErrors((current) => ({ ...current, identifier: "" }));
             }}
-            placeholder="admin ou admin@projetos.local"
+            placeholder="usuario ou usuario@paulista.local"
           />
           {errors.identifier ? <p className="field-error">{errors.identifier}</p> : null}
 
@@ -104,19 +104,8 @@ function LoginPage() {
         </form>
 
         <div className="login-hint">
-          <strong>Credenciais de teste</strong>
-          <p>Usuario: admin</p>
-          <p>Senha: 123456</p>
-          <button
-            type="button"
-            className="ghost-button"
-            onClick={() => {
-              setIdentifier("admin");
-              setPassword("123456");
-            }}
-          >
-            Usar acesso admin
-          </button>
+          <strong>Acesso via LDAP</strong>
+          <p>Entre com as mesmas credenciais usadas na rede da prefeitura.</p>
         </div>
       </article>
     </section>
