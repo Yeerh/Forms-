@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { submitFormulario } from "../api/formularioApi";
 
 const tiposDocumento = [
@@ -105,6 +105,17 @@ function FormularioPage() {
       percent: Math.round((done / total) * 100),
     };
   }, [files.length, formData, requiredFields]);
+  useEffect(() => {
+    if (!successMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage("");
+    }, 4200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage]);
 
   function isBlank(value) {
     return value === undefined || value === null || String(value).trim() === "";
@@ -228,6 +239,17 @@ function FormularioPage() {
   return (
     <section className="form-page">
       <article className="form-card form-card-enhanced">
+        {successMessage ? (
+          <div className="form-toast" role="status">
+            <div>
+              <strong>Envio confirmado</strong>
+              <p>{successMessage}</p>
+            </div>
+            <button type="button" className="ghost-button" onClick={() => setSuccessMessage("")}>
+              Fechar
+            </button>
+          </div>
+        ) : null}
         <header className="form-header">
           <div>
             <h2>Formulario de Acompanhamento</h2>
@@ -246,7 +268,6 @@ function FormularioPage() {
           </div>
         </header>
 
-        {successMessage ? <p className="success-box">{successMessage}</p> : null}
         {apiError ? <p className="api-error">{apiError}</p> : null}
 
         <form className="form-stack" onSubmit={handleSubmit} noValidate>
@@ -431,3 +452,4 @@ function FormularioPage() {
 }
 
 export default FormularioPage;
+

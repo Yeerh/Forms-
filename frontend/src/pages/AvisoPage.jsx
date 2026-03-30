@@ -14,7 +14,7 @@ function AvisoPage() {
   return (
     <section className="aviso-page">
       <article className="aviso-card">
-        <p className="aviso-eyebrow">Gestao de Projetos</p>
+        <h1 className="aviso-animated-title">Acompanhamento de Projetos</h1>
         <h2>Tela de Aviso</h2>
         <p className="muted">Leia as orientacoes antes de iniciar o preenchimento.</p>
 
