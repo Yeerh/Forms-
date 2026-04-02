@@ -1,7 +1,25 @@
 import axios from "axios";
 import { authStorageKeys } from "../context/AuthContext";
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3001";
+function resolveApiBaseUrl() {
+  const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+  if (configuredApiUrl) {
+    return configuredApiUrl;
+  }
+
+  if (typeof window === "undefined") {
+    return "http://localhost:3001";
+  }
+
+  const { protocol, hostname } = window.location;
+  const resolvedProtocol = protocol === "https:" ? "https:" : "http:";
+  const resolvedHostname = hostname || "localhost";
+
+  return `${resolvedProtocol}//${resolvedHostname}:3001`;
+}
+
+const apiBaseUrl = resolveApiBaseUrl();
 
 const httpClient = axios.create({
   baseURL: apiBaseUrl,

@@ -22,11 +22,19 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
   const [user, setUser] = useState(() => readStoredUser());
 
-  function login(nextToken, nextUser) {
+  function persistSession(nextToken, nextUser) {
     localStorage.setItem(TOKEN_STORAGE_KEY, nextToken);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
     setToken(nextToken);
     setUser(nextUser);
+  }
+
+  function login(nextToken, nextUser) {
+    persistSession(nextToken, nextUser);
+  }
+
+  function updateSession(nextToken, nextUser) {
+    persistSession(nextToken, nextUser);
   }
 
   function logout() {
@@ -42,6 +50,7 @@ export function AuthProvider({ children }) {
       user,
       isAuthenticated: !!token,
       login,
+      updateSession,
       logout,
     }),
     [token, user]
@@ -63,4 +72,3 @@ export const authStorageKeys = {
   TOKEN_STORAGE_KEY,
   USER_STORAGE_KEY,
 };
-

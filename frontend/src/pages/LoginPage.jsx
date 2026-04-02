@@ -41,12 +41,16 @@ function LoginPage() {
       setLoading(true);
       const response = await loginRequest(identifier, password);
       login(response.token, response.user);
-      const nextRoute = location.state?.from || "/dashboard";
+      const nextRoute = response.requiresComplements ? "/complements" : location.state?.from || "/dashboard";
       navigate(nextRoute, { replace: true });
     } catch (error) {
       if (!error.response) {
         setApiError(
           `Nao foi possivel conectar com a API em ${apiBaseUrl}. Inicie o backend com: cd backend && npm run dev`
+        );
+      } else if (error.response.status === 404) {
+        setApiError(
+          `A rota de login nao foi encontrada em ${apiBaseUrl}/login. Confira se a API correta esta rodando na porta 3001 ou defina VITE_API_URL no frontend/.env.`
         );
       } else if (error.response.status === 401) {
         setApiError(error.response?.data?.message || "Credenciais invalidas.");

@@ -3,6 +3,7 @@ import Grainient from "./components/Grainient";
 import PillNav from "./components/PillNav";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AvisoPage from "./pages/AvisoPage";
+import ComplementsPage from "./pages/ComplementsPage";
 import DashboardPage from "./pages/DashboardPage";
 import FormularioPage from "./pages/FormularioPage";
 import LoginPage from "./pages/LoginPage";
@@ -13,6 +14,7 @@ function App() {
   const navItems = [
     { label: "Avisos", href: "/" },
     { label: "Formulario", href: "/formulario" },
+    { label: "Complements", href: "/complements" },
     { label: "Login", href: "/login" },
   ];
 
@@ -70,6 +72,14 @@ function App() {
           <Route path="/" element={<AvisoPage />} />
           <Route path="/aviso" element={<Navigate to="/" replace />} />
           <Route path="/formulario" element={<FormularioPage />} />
+          <Route
+            path="/complements"
+            element={
+              <ProtectedRoute allowIncompleteProfile>
+                <ComplementsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/dashboard"
@@ -79,7 +89,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>
